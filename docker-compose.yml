@@ -1,0 +1,41 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:latest
+    container_name: schema-demo-postgres
+    environment:
+      POSTGRES_DB: schema_demo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d schema_demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: schema-demo-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/schema_demo?currentSchema=my_schema
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      # Option A: Tell Hibernate default schema
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: my_schema
+      # Create/Update tables automatically for demo
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      # Ensure schema.sql runs so schemas exist
+      SPRING_SQL_INIT_MODE: always
+      SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION: "true"
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
